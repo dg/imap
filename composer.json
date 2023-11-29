@@ -1,0 +1,27 @@
+{
+	"name": "dg/imap",
+	"description": "Retrieval, processing, and manipulation of emails within a mailbox via POP3, IMAP and NNTP",
+	"keywords": ["mail", "imap", "pop3"],
+	"license": ["BSD-3-Clause", "GPL-2.0", "GPL-3.0"],
+	"authors": [
+		{
+			"name": "David Grudl",
+			"homepage": "https://davidgrudl.com"
+		}
+	],
+	"require": {
+		"php": ">=8.1",
+		"ext-imap": "*"
+	},
+	"require-dev": {
+		"nette/tester": "^2.5",
+		"phpstan/phpstan": "^1"
+	},
+	"autoload": {
+		"classmap": ["src/"]
+	},
+	"scripts": {
+		"phpstan": "phpstan analyse",
+		"tester": "tester tests -s"
+	}
+}
