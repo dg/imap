@@ -2,6 +2,7 @@
 
 namespace DG\Imap;
 use IMAP\Connection;
+use function is_string;
 
 
 /**
@@ -49,10 +50,16 @@ final class MessagePart
 			ENCBASE64 => base64_decode($content, true),
 			default => $content,
 		};
+		if ($content === false) {
+			throw new \RuntimeException;
+		}
 
 		$charset = $this->getParameter('CHARSET');
 		if ($charset) {
 			$content = iconv($charset, 'UTF-8', $content);
+			if ($content === false) {
+				throw new \RuntimeException('Failed to convert charset of message part');
+			}
 		}
 
 		return $content;
@@ -70,7 +77,7 @@ final class MessagePart
 
 	/**
 	 * Returns all parameters of the message part.
-	 * @return string[]
+	 * @return array<string, string>
 	 */
 	public function getParameters(): array
 	{

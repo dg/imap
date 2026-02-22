@@ -32,8 +32,8 @@ final class Mailbox
 
 	/**
 	 * Fetches all messages from the mailbox.
-	 * @return Message[]
-	 * @throws Exception If message retrieval fails.
+	 * @return list<Message>
+	 * @throws Exception
 	 */
 	public function getMessages(): array
 	{
@@ -41,15 +41,16 @@ final class Mailbox
 			$this->connect();
 		}
 
-		$status = @imap_check($this->connection) ?: throw new Exception;
+		$connection = $this->connection ?? throw new \LogicException;
+		$status = @imap_check($connection) ?: throw new Exception;
 		if (!$status->Nmsgs) {
 			return [];
 		}
 
-		$messages = @imap_fetch_overview($this->connection, "1:{$status->Nmsgs}") ?: throw new Exception;
+		$messages = @imap_fetch_overview($connection, "1:{$status->Nmsgs}") ?: throw new Exception;
 		$res = [];
 		foreach ($messages as $message) {
-			$res[] = new Message($this->connection, $message);
+			$res[] = new Message($connection, $message);
 		}
 
 		return $res;

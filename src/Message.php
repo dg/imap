@@ -2,6 +2,7 @@
 
 namespace DG\Imap;
 use IMAP\Connection;
+use function count, is_string;
 
 
 /**
@@ -25,7 +26,8 @@ final class Message
 	 */
 	public function getSubject(): string
 	{
-		return iconv_mime_decode($this->message->subject);
+		$subject = iconv_mime_decode($this->message->subject);
+		return $subject !== false ? $subject : throw new \RuntimeException('Failed to decode subject');
 	}
 
 
@@ -95,7 +97,7 @@ final class Message
 
 	/**
 	 * Returns an array of all parts of the message.
-	 * @return MessagePart[]
+	 * @return list<MessagePart>
 	 */
 	public function getParts(): array
 	{
