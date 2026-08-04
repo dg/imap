@@ -3,11 +3,9 @@
 namespace DG\Imap;
 
 
+/**
+ * Communication with the IMAP server failed.
+ */
 class Exception extends \Exception
 {
-	public function __construct()
-	{
-		$errors = imap_errors();
-		parent::__construct($errors ? end($errors) : 'Unknown error');
-	}
 }

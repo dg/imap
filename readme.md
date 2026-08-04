@@ -7,7 +7,7 @@ IMAP Library for PHP
 [![License](https://img.shields.io/badge/license-New%20BSD-blue.svg)](https://github.com/dg/imap/blob/master/license.md)
 
 
-This IMAP Library for PHP provides an intuitive and easy-to-use interface to interact with POP3, IMAP and NNTP mail servers. It allows for operations such as connecting to mailboxes, fetching messages, handling message parts, and managing email content.
+This IMAP Library for PHP provides an intuitive and easy-to-use interface to interact with IMAP mail servers. It allows for operations such as connecting to mailboxes, fetching messages, handling message parts, and managing email content. The IMAP protocol is implemented in pure PHP, so the library does not need the unmaintained `imap` extension removed from PHP 8.4.
 
 - Connect to IMAP servers with ease
 - Fetch and manage email messages
@@ -25,7 +25,7 @@ To install the library, you can use Composer. Run the following command in your 
 composer require dg/imap
 ```
 
-It requires PHP version 8.1 with extension imap.
+It requires PHP version 8.1 and no extensions beyond the defaults (iconv, openssl).
 
 
 Connecting to a Mailbox

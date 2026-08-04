@@ -1,7 +1,7 @@
 {
 	"name": "dg/imap",
-	"description": "Retrieval, processing, and manipulation of emails within a mailbox via POP3, IMAP and NNTP",
-	"keywords": ["mail", "imap", "pop3"],
+	"description": "Retrieval, processing, and manipulation of emails within an IMAP mailbox, implemented in pure PHP",
+	"keywords": ["mail", "imap"],
 	"license": ["BSD-3-Clause", "GPL-2.0-only", "GPL-3.0-only"],
 	"authors": [
 		{
@@ -11,7 +11,8 @@
 	],
 	"require": {
 		"php": ">=8.1",
-		"ext-imap": "*"
+		"ext-iconv": "*",
+		"ext-openssl": "*"
 	},
 	"require-dev": {
 		"nette/tester": "^2.5",

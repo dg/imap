@@ -1,8 +1,6 @@
 <?php declare(strict_types=1);
 
 namespace DG\Imap;
-use IMAP\Connection;
-use function is_string;
 
 
 /**
@@ -10,68 +8,69 @@ use function is_string;
  */
 final class MessagePart
 {
-	/** @var string[] */
-	private array $params = [];
+	/** @var array<string, string> */
+	private array $headers;
+	private string $body;
+	private string $type;
+
+	/** @var array<string, string>  parameters of the Content-Type header, with uppercased names */
+	private array $params;
 
 
 	/** @internal */
-	public function __construct(
-		private Connection $connection,
-		private int $messageNo,
-		private string $partNo,
-		private \stdClass $info,
-	) {
-		foreach ($info->parameters ?? [] as $pair) {
-			$this->params[$pair->attribute] = $pair->value;
-		}
+	public function __construct(string $raw)
+	{
+		[$this->headers, $this->body] = MimeParser::parse($raw);
+		[$this->type, $this->params] = MimeParser::parseHeaderValue($this->headers['content-type'] ?? '');
 	}
 
 
 	/**
-	 * Returns the content of the message part.
+	 * Returns the content of the message part with transfer encoding decoded. A text part
+	 * declaring a charset is converted to UTF-8; an illegal byte costs at most itself, an
+	 * unknown charset falls back to the undecoded bytes, and a charset wrongly declared on
+	 * a binary part is ignored.
 	 */
 	public function getContents(): string
 	{
-		$content = @imap_fetchbody($this->connection, $this->messageNo, $this->partNo, FT_PEEK);
-		return is_string($content)
-			? $this->decodePart($content)
-			: throw new Exception;
-
-	}
-
-
-	/**
-	 * Decodes the message part content based on its encoding.
-	 */
-	private function decodePart(string $content): string
-	{
-		$content = match ($this->info->encoding) {
-			ENCQUOTEDPRINTABLE => quoted_printable_decode($content),
-			ENCBASE64 => base64_decode($content, true),
-			default => $content,
+		$content = match (MimeParser::parseHeaderValue($this->headers['content-transfer-encoding'] ?? '')[0]) {
+			'quoted-printable' => quoted_printable_decode($this->body),
+			'base64' => base64_decode($this->body, strict: true),
+			default => $this->body,
 		};
 		if ($content === false) {
-			throw new \RuntimeException;
+			throw new Exception('Failed to decode content of message part');
 		}
 
 		$charset = $this->getParameter('CHARSET');
-		if ($charset) {
-			$content = iconv($charset, 'UTF-8', $content);
-			if ($content === false) {
-				throw new \RuntimeException('Failed to convert charset of message part');
-			}
-		}
-
-		return $content;
+		return $charset && str_starts_with($this->type, 'text/')
+			? self::convert($content, $charset)
+			: $content;
 	}
 
 
 	/**
-	 * Returns a specific parameter of the message part.
+	 * Converts to UTF-8. An illegal byte sequence is retried with //IGNORE to salvage the readable
+	 * text; how much that salvages is up to the iconv implementation, and the undecoded bytes are
+	 * returned when it refuses too, so never depend on the exact output for such input.
+	 */
+	private static function convert(string $content, string $charset): string
+	{
+		$converted = @iconv($charset, 'UTF-8', $content); // @ - an illegal byte is retried below
+		if ($converted === false) {
+			$converted = @iconv($charset, 'UTF-8//IGNORE', $content); // @ - an unknown charset falls back
+		}
+
+		return $converted === false ? $content : $converted;
+	}
+
+
+	/**
+	 * Returns a specific parameter of the message part; the name is case-insensitive.
 	 */
 	public function getParameter(string $name): ?string
 	{
-		return $this->params[$name] ?? null;
+		return $this->params[strtoupper($name)] ?? null;
 	}
 
 
