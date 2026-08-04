@@ -3,6 +3,7 @@
 .github export-ignore
 phpstan.neon export-ignore
 tests/ export-ignore
+AGENTS.md export-ignore
 
 *.sh eol=lf
 *.php* diff=php linguist-language=PHP
