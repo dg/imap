@@ -15,13 +15,16 @@ final class Message
 	/** @var ?list<string>  raw top-level MIME parts */
 	private ?array $parts = null;
 
+	private bool $removed = false;
+
 
 	/**
 	 * @param  array<string, string>  $headers
 	 * @internal
 	 */
 	public function __construct(
-		private ?Connection $connection,
+		private ?Mailbox $mailbox,
+		private int $generation,
 		private int $uid,
 		private array $headers,
 	) {
@@ -35,7 +38,7 @@ final class Message
 	public static function fromString(string $raw): self
 	{
 		[$headers, $body] = MimeParser::parse($raw);
-		$message = new self(null, 0, $headers);
+		$message = new self(null, 0, 0, $headers);
 		$message->processBody($body);
 		return $message;
 	}
@@ -88,12 +91,54 @@ final class Message
 
 
 	/**
-	 * Marks the message for deletion; it is removed from the mailbox when the mailbox is closed.
+	 * Removes the message from the mailbox right away. What that means is the server's policy:
+	 * a plain IMAP server destroys it, Gmail applies the Auto-Expunge setting of the account.
+	 * Use trash() or archive() when the outcome has to be the same everywhere.
 	 */
 	public function delete(): void
 	{
-		$connection = $this->connection ?? throw new \LogicException('Message is not bound to a mailbox');
-		$connection->command("UID STORE {$this->uid} +FLAGS.SILENT (\\Deleted)");
+		$this->requireMailbox()->deleteMessage($this->uid);
+		$this->removed = true;
+	}
+
+
+	/**
+	 * Moves the message to the folder the server designates as trash, so it is removed from
+	 * the mailbox but stays recoverable until the server's retention period ends.
+	 * @throws Exception  The server advertises no trash folder.
+	 */
+	public function trash(): void
+	{
+		$this->moveTo(
+			$this->requireMailbox()->getSpecialFolder('\Trash')
+			?? throw new Exception('The server advertises no trash folder, use moveTo() with an explicit name'),
+		);
+	}
+
+
+	/**
+	 * Moves the message to the folder the server designates as archive, so it disappears from
+	 * the mailbox but is not deleted. On Gmail this is All Mail.
+	 * @throws Exception  The server advertises no archive folder.
+	 */
+	public function archive(): void
+	{
+		$mailbox = $this->requireMailbox();
+		$this->moveTo(
+			$mailbox->getSpecialFolder('\Archive')
+			?? $mailbox->getSpecialFolder('\All')
+			?? throw new Exception('The server advertises no archive folder, use moveTo() with an explicit name'),
+		);
+	}
+
+
+	/**
+	 * Moves the message to the given folder, named in UTF-8.
+	 */
+	public function moveTo(string $folder): void
+	{
+		$this->requireMailbox()->moveMessage($this->uid, $folder);
+		$this->removed = true;
 	}
 
 
@@ -147,7 +192,26 @@ final class Message
 
 
 	/**
-	 * Fetches and caches the body of the message.
+	 * @throws \LogicException  The message is detached or no longer in the mailbox.
+	 */
+	private function requireMailbox(): Mailbox
+	{
+		if ($this->removed) {
+			throw new \LogicException('Message is no longer in the mailbox');
+		}
+
+		$mailbox = $this->mailbox ?? throw new \LogicException('Message is not bound to a mailbox');
+		if ($mailbox->getGeneration() !== $this->generation) {
+			throw new Exception('Message comes from an earlier session, its UID is no longer valid');
+		}
+
+		return $mailbox;
+	}
+
+
+	/**
+	 * Fetches and caches the body of the message. Once cached it stays readable even after the
+	 * message was removed from the mailbox; only a fetch that still has to happen fails.
 	 */
 	private function fetchBody(): void
 	{
@@ -155,7 +219,7 @@ final class Message
 			return;
 		}
 
-		$connection = $this->connection ?? throw new \LogicException('Message is not bound to a mailbox');
+		$connection = $this->requireMailbox()->getConnection();
 		foreach ($connection->command("UID FETCH {$this->uid} (BODY.PEEK[])") as $line) {
 			$parsed = str_starts_with($line, '* ') ? Connection::parseLiteral($line) : null;
 			if ($parsed) {

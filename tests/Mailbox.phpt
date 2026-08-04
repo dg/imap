@@ -45,6 +45,63 @@ test('rejects invalid mailbox specification', function () {
 });
 
 
+test('getFolders decodes UTF-7 names and handles a name sent as a literal', function () {
+	[$connection] = scriptedConnection(implode('', [
+		"* LIST (\\HasNoChildren) \"/\" \"INBOX\"\r\n",
+		"* LIST (\\HasNoChildren \\Trash) \"/\" \"Ko&AWE-\"\r\n",
+		"* LIST (\\Noselect) \"/\" {15}\r\nFolder \"quoted\"\r\n",
+		"T1 OK done\r\n",
+	]));
+	$mailbox = new Mailbox('{example.com}', 'user', 'password');
+	Assert::with($mailbox, function () use ($connection) {
+		$this->connection = $connection;
+	});
+
+	$folders = $mailbox->getFolders();
+	Assert::same(['\HasNoChildren'], $folders['INBOX']);
+	Assert::same(['\HasNoChildren', '\Trash'], $folders['Koš']);
+	Assert::same(['\Noselect'], $folders['Folder "quoted"']);
+	Assert::same('Koš', $mailbox->getSpecialFolder('\Trash'));
+});
+
+
+test('a failed connect() leaves the previous session alone', function () {
+	[$connection] = scriptedConnection("T1 OK NOOP completed\r\n");
+	$mailbox = new Mailbox('{127.0.0.1:0}', 'user', 'password'); // port 0 fails without a network round trip
+	Assert::with($mailbox, function () use ($connection) {
+		$this->connection = $connection;
+	});
+
+	Assert::exception(
+		fn() => $mailbox->connect(),
+		DG\Imap\Exception::class,
+		'Cannot connect to 127.0.0.1:0%a%',
+	);
+	Assert::same($connection, $mailbox->getConnection()); // the mailbox still holds it
+	Assert::same([], $connection->command('NOOP')); // and it was not taken down
+});
+
+
+test('a failed folder listing is not cached as an empty one', function () {
+	[$connection] = scriptedConnection(implode('', [
+		"T1 NO LIST failed\r\n",
+		"* LIST (\\HasNoChildren) \"/\" \"INBOX\"\r\n",
+		"T2 OK done\r\n",
+	]));
+	$mailbox = new Mailbox('{example.com}', 'user', 'password');
+	Assert::with($mailbox, function () use ($connection) {
+		$this->connection = $connection;
+	});
+
+	Assert::exception(
+		fn() => $mailbox->getFolders(),
+		DG\Imap\Exception::class,
+		'Command failed: NO LIST failed',
+	);
+	Assert::same(['INBOX' => ['\HasNoChildren']], $mailbox->getFolders()); // retried, not served from a poisoned cache
+});
+
+
 test('rejects STARTTLS instead of silently connecting in plaintext', function () {
 	Assert::exception(
 		fn() => new Mailbox('{example.com/tls}', 'user', 'password'),

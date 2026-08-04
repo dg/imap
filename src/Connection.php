@@ -2,7 +2,7 @@
 
 namespace DG\Imap;
 
-use function strlen;
+use function in_array, strlen;
 
 
 /**
@@ -14,6 +14,9 @@ final class Connection
 	/** @var ?resource */
 	private $stream;
 	private int $tagCount = 0;
+
+	/** @var ?list<string> */
+	private ?array $capabilities = null;
 
 
 	/**
@@ -75,6 +78,37 @@ final class Connection
 			}
 			$lines[] = $line;
 		}
+	}
+
+
+	/**
+	 * Checks whether the server announced the given capability, e.g. 'MOVE' or 'UIDPLUS'.
+	 */
+	public function hasCapability(string $capability): bool
+	{
+		if ($this->capabilities === null) {
+			$this->capabilities = [];
+			foreach ($this->command('CAPABILITY') as $line) {
+				if (preg_match('~^\* CAPABILITY (.*)~i', trim($line), $m)) {
+					$this->capabilities = preg_split('~\s+~', strtoupper($m[1]), -1, PREG_SPLIT_NO_EMPTY);
+				}
+			}
+		}
+
+		return in_array(strtoupper($capability), $this->capabilities, true);
+	}
+
+
+	/**
+	 * Quotes a string for use as a command argument.
+	 */
+	public static function quote(string $value): string
+	{
+		if (preg_match('~[\r\n]~', $value)) {
+			throw new Exception('Value must not contain line breaks');
+		}
+
+		return '"' . addcslashes($value, '"\\') . '"';
 	}
 
 
