@@ -1,8 +1,6 @@
 <?php declare(strict_types=1);
 
-use DG\Imap\Connection;
-use DG\Imap\Mailbox;
-use DG\Imap\Message;
+use DG\Imap\{Connection, Mailbox, Message};
 use Tester\Assert;
 
 require __DIR__ . '/bootstrap.php';

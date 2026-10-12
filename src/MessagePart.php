@@ -9,12 +9,12 @@ namespace DG\Imap;
 final class MessagePart
 {
 	/** @var array<string, string> */
-	private array $headers;
-	private string $body;
-	private string $type;
+	private readonly array $headers;
+	private readonly string $body;
+	private readonly string $type;
 
 	/** @var array<string, string>  parameters of the Content-Type header, with uppercased names */
-	private array $params;
+	private readonly array $params;
 
 
 	/** @internal */
@@ -56,9 +56,9 @@ final class MessagePart
 	 */
 	private static function convert(string $content, string $charset): string
 	{
-		$converted = @iconv($charset, 'UTF-8', $content); // @ - an illegal byte is retried below
+		$converted = @iconv($charset, 'UTF-8', $content); // @ an illegal byte is retried below
 		if ($converted === false) {
-			$converted = @iconv($charset, 'UTF-8//IGNORE', $content); // @ - an unknown charset falls back
+			$converted = @iconv($charset, 'UTF-8//IGNORE', $content); // @ an unknown charset falls back
 		}
 
 		return $converted === false ? $content : $converted;
