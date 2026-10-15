@@ -2,7 +2,7 @@
 
 namespace DG\Imap;
 
-use function in_array, strlen;
+use function strlen;
 
 
 /**
@@ -34,7 +34,7 @@ final class Connection
 	 */
 	public static function connect(string $host, int $port, bool $ssl, float $timeout = 30.0): self
 	{
-		$stream = @stream_socket_client( // @ - failure is throwing exception
+		$stream = @stream_socket_client( // @ is escalated to exception
 			($ssl ? 'ssl://' : 'tcp://') . $host . ':' . $port,
 			$errorCode,
 			$errorMessage,
@@ -152,7 +152,7 @@ final class Connection
 
 	private function write(string $data): void
 	{
-		if (@fwrite($this->getStream(), $data) !== strlen($data)) { // @ - failure is throwing exception
+		if (@fwrite($this->getStream(), $data) !== strlen($data)) { // @ is escalated to exception
 			throw new Exception('Cannot write to server');
 		}
 	}
@@ -174,7 +174,7 @@ final class Connection
 
 	private function readLine(): string
 	{
-		$line = @fgets($this->getStream()); // @ - failure is throwing exception
+		$line = @fgets($this->getStream()); // @ is escalated to exception
 		if ($line === false || !str_ends_with($line, "\n")) { // a partial line means timeout or EOF mid-line
 			throw new Exception('Cannot read from server (connection closed or timed out)');
 		}
@@ -186,7 +186,7 @@ final class Connection
 	{
 		$data = '';
 		while (($remaining = $count - strlen($data)) > 0) {
-			$chunk = @fread($this->getStream(), $remaining); // @ - failure is throwing exception
+			$chunk = @fread($this->getStream(), $remaining); // @ is escalated to exception
 			if ($chunk === false || $chunk === '') {
 				throw new Exception('Cannot read from server (connection closed or timed out)');
 			}

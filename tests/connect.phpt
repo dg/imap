@@ -6,11 +6,7 @@ use Tester\Assert;
 require __DIR__ . '/bootstrap.php';
 
 
-$mailbox = new Mailbox(
-	'{imap.gmail.com:993/imap/ssl}',
-	'your_username@gmai.com',
-	'your_password',
-);
+$mailbox = new Mailbox('{imap.gmail.com:993/imap/ssl}', 'your_username@gmai.com', 'your_password');
 
 Assert::exception(
 	fn() => $mailbox->connect(),

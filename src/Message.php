@@ -19,13 +19,13 @@ final class Message
 
 
 	/**
-	 * @param  array<string, string>  $headers
 	 * @internal
 	 */
 	public function __construct(
-		private ?Mailbox $mailbox,
-		private int $generation,
-		private int $uid,
+		private readonly ?Mailbox $mailbox,
+		private readonly int $generation,
+		private readonly int $uid,
+		/** @var array<string, string> */
 		private array $headers,
 	) {
 	}
@@ -158,10 +158,7 @@ final class Message
 	public function getPart(int $id): MessagePart
 	{
 		$this->fetchBody();
-		$part = $this->parts[$id] ?? null;
-		if ($part === null) {
-			throw new \ValueError('Invalid part number');
-		}
+		$part = $this->parts[$id] ?? throw new \ValueError('Invalid part number');
 
 		return new MessagePart($part);
 	}
@@ -186,7 +183,7 @@ final class Message
 	/** Decodes encoded-words (=?utf-8?B?...?=); malformed input is returned as-is. */
 	private static function decodeHeader(string $value): string
 	{
-		$decoded = @iconv_mime_decode($value); // @ - malformed input falls back to the raw value
+		$decoded = @iconv_mime_decode($value); // @ malformed input falls back to the raw value
 		return $decoded === false ? $value : $decoded;
 	}
 

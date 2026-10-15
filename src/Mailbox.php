@@ -9,10 +9,10 @@ namespace DG\Imap;
 final class Mailbox
 {
 	private ?Connection $connection = null;
-	private string $host;
-	private int $port;
-	private bool $ssl;
-	private string $folder;
+	private readonly string $host;
+	private readonly int $port;
+	private readonly bool $ssl;
+	private readonly string $folder;
 
 	/** @var ?array<string, list<string>>  folder name in UTF-8 => its attributes */
 	private ?array $folders = null;
@@ -26,8 +26,8 @@ final class Mailbox
 	 */
 	public function __construct(
 		string $mailbox,
-		private string $username,
-		private string $password,
+		private readonly string $username,
+		private readonly string $password,
 	) {
 		if (!preg_match('~^\{([^:/}]+)(?::(\d+))?((?:/[\w.-]+)*)\}(.*)$~D', $mailbox, $m)) {
 			throw new Exception("Invalid mailbox specification '$mailbox'");
