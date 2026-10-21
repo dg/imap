@@ -1,7 +1,7 @@
 {
 	"name": "dg/imap",
-	"description": "Retrieval, processing, and manipulation of emails within an IMAP mailbox, implemented in pure PHP",
-	"keywords": ["mail", "imap"],
+	"description": "📥 IMAP for PHP: the replacement for the imap extension that PHP 8.4 removed. Reads mailboxes, messages and attachments in pure PHP, with no dependencies.",
+	"keywords": ["imap", "php-imap", "ext-imap", "email", "mailbox", "attachments"],
 	"license": ["BSD-3-Clause", "GPL-2.0-only", "GPL-3.0-only"],
 	"authors": [
 		{
